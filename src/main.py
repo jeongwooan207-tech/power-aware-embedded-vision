@@ -1,112 +1,40 @@
-from picamera2 import Picamera2
-from ultralytics import YOLO
-import cv2
 import time
-from datetime import datetime
 
-model = YOLO("yolo11n.pt")
+from monitor import get_cpu_temperature, get_load_average
 
-picam2 = Picamera2()
 
-config = picam2.create_preview_configuration(
-    main={"size": (640, 480), "format": "RGB888"}
-)
+def main():
 
-picam2.configure(config)
-picam2.start()
+	print("Power-Aware Embedded Vision")
+	print("---------------------------")
 
-time.sleep(2)
+	try:
 
-# 표시할 물체
-target_objects = {
-    "person",
-    "bottle",
-    "cup",
-    "cell phone"
-}
+		while True:
 
-previous_time = time.time()
+			temperature = get_cpu_temperature()
+			load = get_load_average()
 
-try:
-    while True:
-        frame = picam2.capture_array()
+			if temperature is not None:
+				temp_text = f"{temperature:.1f} °C"
+			else:
+				temp_text = "N/A"
 
-        results = model.predict(
-            source=frame,
-            imgsz=320,
-            conf=0.5,
-            verbose=False
-        )
+			if load is not None:
+				load_text = f"{load:.2f}"
+			else:
+				load_text = "N/A"
 
-        result = results[0]
+			print(
+				f"CPU Temperature: {temp_text} | "
+				f"System Load: {load_text}"
+			)
 
-        # FPS 계산
-        current_time = time.time()
-        fps = 1 / (current_time - previous_time)
-        previous_time = current_time
+			time.sleep(1)
 
-        detected_objects = []
+	except KeyboardInterrupt:
 
-        # 인식 결과를 하나씩 확인
-        for box in result.boxes:
-            class_id = int(box.cls[0])
-            confidence = float(box.conf[0])
-            object_name = model.names[class_id]
+			print("\nMonitoring stopped.")
 
-            if object_name not in target_objects:
-                continue
-
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
-
-            detected_objects.append(object_name)
-
-            cv2.rectangle(
-                frame,
-                (x1, y1),
-                (x2, y2),
-                (0, 255, 0),
-                2
-            )
-
-            label = f"{object_name} {confidence:.2f}"
-
-            cv2.putText(
-                frame,
-                label,
-                (x1, max(y1 - 10, 20)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (0, 255, 0),
-                2
-            )
-
-        cv2.putText(
-            frame,
-            f"FPS: {fps:.1f}",
-            (10, 30),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            (0, 0, 255),
-            2
-        )
-
-        cv2.imshow("Object Detection Step 2", frame)
-
-        key = cv2.waitKey(1) & 0xFF
-
-        # q: 종료
-        if key == ord("q"):
-            break
-
-        # s: 현재 화면 저장
-        if key == ord("s"):
-            filename = datetime.now().strftime(
-                "detected_%Y%m%d_%H%M%S.jpg"
-            )
-
-            cv2.imwrite(filename, frame)
-            print(f"사진 저장 완료: {filename}")
-
-finally:
-    picam2.stop()
-    cv2.destroyAllWindows()
+if __name__ == "__main__":
+	main()
