@@ -15,6 +15,7 @@ __pycache__/
 # Generated results
 results/*
 !results/.gitkeep
+!results/*.png
 
 # Linux and editor files
 .DS_Store
