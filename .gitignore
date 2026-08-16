@@ -20,4 +20,4 @@ results/*
 .DS_Store
 .vscode/
 .idea/
-
+data/*.csv
