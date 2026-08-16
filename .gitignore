@@ -21,3 +21,9 @@ results/*
 .vscode/
 .idea/
 data/*.csv
+
+# Runtime log files
+data/system_log.csv
+data/power_test.csv
+data/power_test_*.csv
+

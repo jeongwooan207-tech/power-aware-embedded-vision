@@ -9,6 +9,7 @@ from controller import select_camera_mode
 
 from logger import initialize_log, log_data
 
+from power import get_core_power
 
 CAMERA_MODE = "HIGH"
 
@@ -33,6 +34,11 @@ def main():
 	actual_fps = 0.0
 	temp_text = "N/A"
 	temp_display = "N/A"
+
+	core_voltage = None
+	core_durrent = None
+	core_power = None
+	power_text = "N/A"
 
 	last_mode_change = time.monotonic()
 	MIN_MODE_DURATION = 5.0
@@ -67,6 +73,8 @@ def main():
 				temperature = get_cpu_temperature()
 				cpu_usage = get_cpu_usage()
 				load = get_load_average()
+
+				core_voltage, core_current, core_power = get_core_power()
 
 				mode = select_camera_mode(cpu_usage, current_mode)
 
@@ -103,13 +111,19 @@ def main():
 				else:
 					cpu_usage_text = "N/A"
 
+				if core_power is not None:
+					power_text = f"{core_power:.2f} W"
+				else:
+					power_text = "N/A"
+
 
 				print(
 					f"CPU Temperature: {temp_text} | "
 					f"CPU Usage: {cpu_usage_text} | "
 					f"System Load: {load_text} | "
 					f"Camera Mode: {current_mode.upper()} | "
-					f"Camera FPS: {actual_fps:.1f}"
+					f"Camera FPS: {actual_fps:.1f} | "
+					f"VDD_CORE Power: {power_text}"
 				)
 
 				log_data(
@@ -118,7 +132,10 @@ def main():
 					temperature,
 					cpu_usage,
 					load,
-					actual_fps
+					actual_fps,
+					core_voltage,
+					core_current,
+					core_power
 				)
 
 				frame_count = 0
@@ -155,6 +172,17 @@ def main():
 				(0, 255, 0),
 				2
 			)
+
+			cv2.putText(
+				frame,
+				f"Power: {power_text}",
+				(20, 160),
+				cv2.FONT_HERSHEY_SIMPLEX,
+				0.7,
+				(0, 255, 0),
+				2
+			)
+
 
 			# Show live camera window
 			cv2.imshow(

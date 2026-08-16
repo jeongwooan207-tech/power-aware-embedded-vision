@@ -20,7 +20,10 @@ def initialize_log(filepath):
 				"cpu_temperature",
 				"cpu_usage",
 				"load_average",
-				"fps"
+				"fps",
+				"core_voltage",
+				"core_current",
+				"core_power"
 			])
 
 
@@ -30,7 +33,10 @@ def log_data(
 	temperature,
 	cpu_usage,
 	load,
-	actual_fps
+	actual_fps,
+	core_voltage,
+	core_current,
+	core_power
 ):
 	"""
 	Append ne measurement to the CSV log file.
@@ -42,12 +48,15 @@ def log_data(
 
 		writer = csv.writer(file)
 
+
 		writer.writerow([
 			timestamp,
 			current_mode,
-			temperature,
-			cpu_usage,
-			load,
-			actual_fps
+			round(temperature, 2),
+			round(cpu_usage, 2),
+			round(load, 2),
+			round(actual_fps, 2),
+			round(core_voltage, 3) if core_voltage is not None else None,
+			round(core_current, 3) if core_current is not None else None,
+			round(core_power, 3) if core_power is not None else None
 		])
-

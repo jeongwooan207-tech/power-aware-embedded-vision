@@ -1,207 +1,208 @@
 # Power-Aware Embedded Vision System
 
-A Raspberry Pi 5 based embedded system for workload monitoring, adaptive camera control, power monitoring, and thermal management.
+A Raspberry Pi 5 based embedded system for **runtime workload control, power monitoring, and performance analysis**.
 
-The Raspberry Pi Camera Module 3 is used as a configurable workload. The system monitors CPU load, temperature, system load, and camera performance, logs the measurements, and dynamically adjusts the camera operating mode.
+The Raspberry Pi Camera Module 3 is used as a configurable workload. The system monitors CPU and camera performance, reads power information directly from the Raspberry Pi 5 PMIC, and dynamically adjusts the camera operating mode.
 
-The final goal is to balance:
-
-**Performance ↔ Power ↔ Temperature**
-
-using a power-aware embedded controller.
-
----
-
-## Current Features
-
-* CPU temperature monitoring
-* CPU usage monitoring
-* system load monitoring
-* camera FPS measurement
-* Raspberry Pi Camera Module 3 integration
-* LOW / MEDIUM / HIGH camera modes
-* adaptive camera mode control
-* live camera preview
-* real-time camera mode, FPS, and CPU temperature overlay
-* CSV data logging
-
-### Camera Modes
+The main engineering goal is to investigate and control the relationship between:
 
 ```text
-LOW
-640 x 480
-10 FPS
-
-MEDIUM
-1280 x 720
-20 FPS
-
-HIGH
-1920 x 1080
-30 FPS
+Performance ↔ Power ↔ Temperature
 ```
 
-The different modes create different computational workloads on the Raspberry Pi 5.
+---
 
-The live preview window keeps a fixed display size while the camera resolution and target FPS change according to the selected operating mode.
+## Key Features
+
+* Raspberry Pi Camera Module 3 integration
+* configurable LOW / MEDIUM / HIGH camera workloads
+* adaptive camera mode control
+* real-time CPU temperature and usage monitoring
+* Linux system load monitoring
+* actual camera FPS measurement
+* Raspberry Pi 5 PMIC voltage/current monitoring
+* VDD_CORE rail power calculation
+* real-time camera and system overlay
+* CSV measurement logging
+* automated fixed-mode power experiments
+* repeated measurements and statistical analysis
+* automatic performance/power visualization
 
 ---
 
-## Hardware
+## Camera Workload
 
-* Raspberry Pi 5
-* Raspberry Pi Camera Module 3
-* Raspberry Pi 5 compatible cooling fan
-* Raspberry Pi power supply
-* microSD card
+Three camera modes provide different workload and performance levels.
 
-The cooling fan is connected to the dedicated Raspberry Pi 5 fan connector and will later be used for active thermal management.
+| Mode   |  Resolution | Target FPS |
+| ------ | ----------: | ---------: |
+| LOW    |   640 × 480 |      5 FPS |
+| MEDIUM |  1280 × 720 |     15 FPS |
+| HIGH   | 1920 × 1080 |     30 FPS |
+
+These operating modes allow the controller to trade camera performance against system resource usage.
 
 ---
 
-## Project Structure
+## System Architecture
+
+```text
+Camera + CPU + PMIC
+        |
+        v
+   Monitoring
+        |
+        v
+   Controller
+        |
+        v
+ LOW / MEDIUM / HIGH
+```
+
+The system is designed as a feedback-oriented embedded application rather than a fixed camera pipeline.
+
+---
+
+## PMIC Power Monitoring
+
+The Raspberry Pi 5 PMIC is used to measure the `VDD_CORE` rail.
+
+```text
+VDD_CORE_V → Voltage
+VDD_CORE_A → Current
+```
+
+Core rail power is calculated using:
+
+```text
+P = V × I
+```
+
+The following values are monitored and logged together:
+
+* CPU temperature
+* CPU usage
+* system load
+* camera mode
+* actual FPS
+* VDD_CORE voltage
+* VDD_CORE current
+* VDD_CORE power
+
+Example runtime output:
+
+```text
+Camera Mode: HIGH
+Camera FPS: 28.1
+CPU Temperature: 53.0 C
+CPU Usage: 2.5 %
+Core Voltage: 0.772 V
+Core Current: 0.683 A
+Core Power: 0.529 W
+```
+
+> **Note:** The measured power represents the Raspberry Pi 5 **VDD_CORE rail**, not total Raspberry Pi input power.
+
+---
+
+## Experimental Evaluation
+
+To quantify the performance-power relationship, the adaptive controller was disabled during testing and each camera mode was operated under fixed conditions.
+
+Experimental procedure:
+
+* 5 s camera warm-up
+* 60 s measurement per mode
+* LOW / MEDIUM / HIGH fixed operating modes
+* 3 independent experimental runs
+* mean and standard deviation calculation
+
+### Results
+
+| Mode   | Avg FPS |     CPU Usage | CPU Temperature |  VDD_CORE Power | Performance / Power |
+| ------ | ------: | ------------: | --------------: | --------------: | ------------------: |
+| LOW    |    5.03 | 1.58 ± 0.12 % | 52.35 ± 0.60 °C | 0.465 ± 0.030 W |         10.81 FPS/W |
+| MEDIUM |   14.95 | 1.92 ± 0.05 % | 51.74 ± 0.20 °C | 0.480 ± 0.030 W |         31.15 FPS/W |
+| HIGH   |   28.08 | 2.54 ± 0.11 % | 52.98 ± 0.45 °C | 0.529 ± 0.079 W |         53.05 FPS/W |
+
+Increasing the workload from LOW to HIGH increased measured camera throughput from **5.03 FPS to 28.08 FPS**, while average VDD_CORE power increased from **0.465 W to 0.529 W**.
+
+The HIGH mode also showed the largest power variation.
+
+This demonstrates why real-time power feedback can be more useful than assigning a fixed assumed power consumption to each operating mode.
+
+---
+
+## Performance vs Power
+
+### VDD_CORE Power
+
+![Core Power](results/core_power.png)
+
+### Performance per VDD_CORE Power
+
+![Performance per Power](results/performance_per_power.png)
+
+Additional FPS and CPU usage plots are available in the `results/` directory.
+
+One interesting result is that reducing workload does not automatically maximize measured performance per VDD_CORE watt.
+
+This motivates a controller that considers **delivered performance as well as power consumption**, instead of simply selecting the lowest workload.
+
+---
+
+## Software Structure
 
 ```text
 src/
 |
 |-- main.py
-|   `-- Overall system orchestration and live camera display
-|
-|-- monitor.py
-|   |-- CPU temperature
-|   |-- CPU usage
-|   `-- System load
+|   `-- Runtime orchestration
 |
 |-- camera.py
-|   |-- Camera configuration
-|   |-- Resolution control
-|   |-- FPS control
-|   `-- Frame capture
+|   `-- Camera configuration and frame capture
+|
+|-- monitor.py
+|   `-- CPU temperature, usage and system load
 |
 |-- controller.py
-|   `-- Adaptive camera mode control
+|   `-- Adaptive camera workload control
 |
-`-- logger.py
-    `-- CSV data logging
+|-- power.py
+|   `-- PMIC measurement and power calculation
+|
+|-- logger.py
+|   `-- CSV measurement logging
+|
+|-- power_test.py
+|   `-- Controlled power experiments
+|
+`-- analyze_power.py
+    `-- Statistical analysis and visualization
 ```
 
----
-
-## Development Roadmap
-
-### Stage 1 - Camera Workload [Completed]
-
-* Camera Module 3 integration
-* frame capture
-* resolution control
-* FPS control
-
-### Stage 2 - Monitoring and Logging [Completed]
-
-* CPU temperature
-* CPU usage
-* system load
-* camera FPS
-* CSV logging
-
-### Stage 3 - Power-Aware Controller [Completed]
-
-* LOW / MEDIUM / HIGH camera modes
-* dynamic camera mode selection
-* workload-based camera control
-* live camera preview
-* real-time camera mode, FPS, and CPU temperature display
-* fixed-size preview window independent of camera operating mode
-
-### Stage 4 - PMIC Power Monitoring [Planned]
-
-The Raspberry Pi 5 PMIC provides internal voltage and current measurements.
-
-Power can be calculated using:
-
-**P = V x I**
-
-Planned features:
-
-* voltage monitoring
-* current monitoring
-* CPU core power calculation
-* PMIC rail power estimation
-* power data logging
-* comparison of power consumption between camera modes
-
-### Stage 5 - Thermal Management [Planned]
-
-The existing Raspberry Pi 5 fan will be integrated into the controller.
-
-Planned features:
-
-* temperature-dependent fan control
-* fan speed control
-* coordination between camera workload and cooling
-* power-aware thermal management
+The software is separated into monitoring, workload generation, control, logging, power measurement and analysis modules so that each component can be modified independently.
 
 ---
 
-## System Concept
+## Engineering Focus
+
+This project is focused on embedded system behaviour rather than only camera functionality.
+
+Key engineering topics include:
+
+* embedded Linux monitoring
+* workload management
+* PMIC-based electrical measurements
+* power-performance trade-offs
+* runtime feedback and adaptation
+* measurement variability
+* controlled experiments
+* statistical evaluation
+* modular embedded software design
+
+The system is being extended toward a controller that coordinates camera workload and active cooling based on real-time power and temperature measurements:
 
 ```text
-CPU Temperature
-CPU Usage
-System Load
-Camera FPS
-PMIC Power
-      |
-      v
-Power / Thermal Controller
-      |
-  +---+---+
-  |       |
-  v       v
-Camera   Fan
-Mode     Control
+Performance ↔ Power ↔ Temperature
 ```
-
-The final controller will dynamically manage system performance, power consumption, and temperature.
-
----
-
-## Current Status
-
-**Stage 3 completed**
-
-Current system:
-
-```text
-Camera Workload
-      |
-      v
-System Monitoring
-      |
-      +----> Live Camera Preview
-      |       Mode / FPS / CPU Temp
-      |
-      v
-CSV Logging
-      |
-      v
-Power-Aware Camera Controller
-```
-
-Next step:
-
-```text
-Stage 4
-PMIC Voltage / Current / Power Monitoring
-```
-
----
-
-## Future Extensions
-
-* external voltage/current sensor integration
-* more accurate total input power measurement
-* advanced fan control
-* thermal hysteresis
-* power-budget-based workload control
-* power-performance optimization

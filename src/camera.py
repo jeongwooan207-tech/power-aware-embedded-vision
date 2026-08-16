@@ -7,12 +7,12 @@ CAMERA_MODES = {
     "LOW": {
         "width": 640,
         "height": 480,
-        "fps": 10
+        "fps": 5
     },
     "MEDIUM": {
         "width": 1280,
         "height": 720,
-        "fps": 20
+        "fps": 15
     },
     "HIGH": {
         "width": 1920,
