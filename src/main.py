@@ -1,4 +1,5 @@
 import time
+import cv2
 
 from monitor import get_cpu_temperature, get_load_average, get_cpu_usage
 
@@ -29,9 +30,24 @@ def main():
 	frame_count = 0
 	last_measurement = time.monotonic()
 
+	actual_fps = 0.0
+	temp_text = "N/A"
+	temp_display = "N/A"
+
 	last_mode_change = time.monotonic()
 	MIN_MODE_DURATION = 5.0
 
+
+	cv2.namedWindow(
+		"Power-Aware Embedded Vision",
+		cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO
+	)
+
+	cv2.resizeWindow(
+		"Power-Aware Embedded Vision",
+		960,
+		540
+	)
 
 	try:
 
@@ -73,6 +89,7 @@ def main():
 
 				if temperature is not None:
 					temp_text = f"{temperature:.1f} °C"
+					temp_display = f"{temperature:.1f} C"
 				else:
 					temp_text = "N/A"
 
@@ -106,7 +123,50 @@ def main():
 
 				frame_count = 0
 				last_measurement = time.monotonic()
-				MIN_MODE_DURATION = 5.0
+
+
+			# Display camera information on frame
+			cv2.putText(
+				frame,
+				f"Mode: {current_mode.upper()}",
+				(20, 40),
+				cv2.FONT_HERSHEY_SIMPLEX,
+				1,
+				(0, 255, 0),
+				2
+			)
+
+			cv2.putText(
+				frame,
+				f"FPS: {actual_fps:.1f}",
+				(20, 80),
+				cv2.FONT_HERSHEY_SIMPLEX,
+				1,
+				(0, 255, 0),
+				2
+			)
+
+			cv2.putText(
+				frame,
+				f"CPU Temp: {temp_display}",
+				(20, 120),
+				cv2.FONT_HERSHEY_SIMPLEX,
+				1,
+				(0, 255, 0),
+				2
+			)
+
+			# Show live camera window
+			cv2.imshow(
+				"Power-Aware Embedded Vision",
+				frame
+			)
+
+			# Press Q to stop the program
+			if cv2.waitKey(1) & 0xFF == ord("q"):
+				break
+
+
 
 	except KeyboardInterrupt:
 
@@ -115,6 +175,8 @@ def main():
 	finally:
 
 		stop_camera(camera)
+		cv2.destroyAllWindows()
+
 		print("Camera stopped.")
 
 if __name__ == "__main__":

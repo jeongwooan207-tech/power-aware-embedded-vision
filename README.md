@@ -21,6 +21,8 @@ using a power-aware embedded controller.
 * Raspberry Pi Camera Module 3 integration
 * LOW / MEDIUM / HIGH camera modes
 * adaptive camera mode control
+* live camera preview
+* real-time camera mode, FPS, and CPU temperature overlay
 * CSV data logging
 
 ### Camera Modes
@@ -40,6 +42,8 @@ HIGH
 ```
 
 The different modes create different computational workloads on the Raspberry Pi 5.
+
+The live preview window keeps a fixed display size while the camera resolution and target FPS change according to the selected operating mode.
 
 ---
 
@@ -61,7 +65,7 @@ The cooling fan is connected to the dedicated Raspberry Pi 5 fan connector and w
 src/
 |
 |-- main.py
-|   `-- Overall system orchestration
+|   `-- Overall system orchestration and live camera display
 |
 |-- monitor.py
 |   |-- CPU temperature
@@ -105,6 +109,9 @@ src/
 * LOW / MEDIUM / HIGH camera modes
 * dynamic camera mode selection
 * workload-based camera control
+* live camera preview
+* real-time camera mode, FPS, and CPU temperature display
+* fixed-size preview window independent of camera operating mode
 
 ### Stage 4 - PMIC Power Monitoring [Planned]
 
@@ -171,6 +178,9 @@ Camera Workload
       v
 System Monitoring
       |
+      +----> Live Camera Preview
+      |       Mode / FPS / CPU Temp
+      |
       v
 CSV Logging
       |
@@ -195,4 +205,3 @@ PMIC Voltage / Current / Power Monitoring
 * thermal hysteresis
 * power-budget-based workload control
 * power-performance optimization
-
