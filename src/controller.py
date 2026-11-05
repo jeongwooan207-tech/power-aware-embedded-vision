@@ -31,4 +31,4 @@ def select_camera_mode(cpu_usage, current_mode):
 
 		return "LOW"
 
-	return "MEDiUM"
+	return "MEDIUM"
